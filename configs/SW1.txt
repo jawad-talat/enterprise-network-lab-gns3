@@ -1,0 +1,37 @@
+! ============================================================
+! Device: SW1 — HQ Core Switch
+! Platform: Cisco IOU L2 15.1
+! Role: Core switching, trunking, DHCP snooping
+! Note: SSH not supported on this IOU image
+! ============================================================
+
+hostname SW1
+no ip domain-lookup
+
+! DHCP Snooping
+ip dhcp snooping
+ip dhcp snooping vlan 10-40
+no ip dhcp snooping information option
+
+! Trunk toward R1 — trusted
+interface Ethernet0/0
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ ip dhcp snooping trust
+
+! Trunk toward SW2
+interface Ethernet0/1
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+
+! VLANs
+vlan 10
+ name Sales
+vlan 20
+ name IT
+vlan 30
+ name HR
+vlan 40
+ name Management
