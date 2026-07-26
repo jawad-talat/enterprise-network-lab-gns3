@@ -1,0 +1,52 @@
+! ============================================================
+! Device: R2 — Branch Router
+! IOS: 12.4 on Cisco c3725
+! Role: Branch routing, DHCP Relay, OSPF, SSH, ACL
+! ============================================================
+
+hostname R2
+no ip domain-lookup
+ip domain-name corp.lab
+ip ssh version 2
+username admin privilege 15 secret [password]
+
+! WAN interface
+interface FastEthernet0/0
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+
+! Branch subinterfaces with DHCP relay
+interface FastEthernet0/1
+ no ip address
+ no shutdown
+
+interface FastEthernet0/1.10
+ encapsulation dot1Q 10
+ ip address 192.168.110.1 255.255.255.224
+ ip helper-address 10.0.0.1
+ ip access-group BLOCK_HR out
+
+interface FastEthernet0/1.20
+ encapsulation dot1Q 20
+ ip address 192.168.120.1 255.255.255.240
+ ip helper-address 10.0.0.1
+
+! OSPF
+router ospf 1
+ network 10.0.0.0 0.0.0.3 area 0
+ network 192.168.110.0 0.0.0.31 area 0
+ network 192.168.120.0 0.0.0.15 area 0
+
+! ACL blocking HR from Branch
+ip access-list standard BLOCK_HR
+ deny 192.168.30.0 0.0.0.15
+ permit any
+
+! Line config
+line con 0
+ password cisco@123
+ login
+
+line vty 0 4
+ login local
+ transport input ssh
