@@ -1,0 +1,123 @@
+! ============================================================
+! Device: R1 — HQ Router
+! IOS: 12.4 on Cisco c3725
+! Role: Router-on-a-Stick, DHCP, NAT/PAT, OSPF, SSH, ACL
+! ============================================================
+
+hostname R1
+no ip domain-lookup
+ip domain-name corp.lab
+ip ssh version 2
+username admin privilege 15 secret [password]
+
+! DHCP Excluded
+ip dhcp excluded-address 192.168.10.1 192.168.10.5
+ip dhcp excluded-address 192.168.20.1 192.168.20.5
+ip dhcp excluded-address 192.168.30.1 192.168.30.5
+ip dhcp excluded-address 192.168.40.1 192.168.40.3
+ip dhcp excluded-address 192.168.110.1 192.168.110.5
+ip dhcp excluded-address 192.168.120.1 192.168.120.5
+
+! DHCP Pools
+ip dhcp pool SALES10
+ network 192.168.10.0 255.255.255.192
+ default-router 192.168.10.1
+ dns-server 8.8.8.8
+
+ip dhcp pool IT20
+ network 192.168.20.0 255.255.255.224
+ default-router 192.168.20.1
+ dns-server 8.8.8.8
+
+ip dhcp pool HR30
+ network 192.168.30.0 255.255.255.240
+ default-router 192.168.30.1
+ dns-server 8.8.8.8
+
+ip dhcp pool Mgmt40
+ network 192.168.40.0 255.255.255.248
+ default-router 192.168.40.1
+ dns-server 8.8.8.8
+
+ip dhcp pool Branch10
+ network 192.168.110.0 255.255.255.224
+ default-router 192.168.110.1
+ dns-server 8.8.8.8
+
+ip dhcp pool Branch20
+ network 192.168.120.0 255.255.255.240
+ default-router 192.168.120.1
+ dns-server 8.8.8.8
+
+! WAN interface
+interface FastEthernet0/0
+ ip address 10.0.0.1 255.255.255.252
+ ip nat inside
+ no shutdown
+
+! Internet interface
+interface FastEthernet0/1
+ ip address 203.0.113.1 255.255.255.252
+ ip nat outside
+ no shutdown
+
+! LAN trunk to SW1
+interface FastEthernet1/0
+ no ip address
+ ip nat inside
+ ip access-group ALLOW_ICMP_ONLY in
+ no shutdown
+
+interface FastEthernet1/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.192
+ ip nat inside
+
+interface FastEthernet1/0.20
+ encapsulation dot1Q 20
+ ip address 192.168.20.1 255.255.255.224
+ ip nat inside
+
+interface FastEthernet1/0.30
+ encapsulation dot1Q 30
+ ip address 192.168.30.1 255.255.255.240
+ ip nat inside
+
+interface FastEthernet1/0.40
+ encapsulation dot1Q 40
+ ip address 192.168.40.1 255.255.255.248
+ ip nat inside
+
+! OSPF
+router ospf 1
+ network 10.0.0.0 0.0.0.3 area 0
+ network 192.168.10.0 0.0.0.63 area 0
+ network 192.168.20.0 0.0.0.31 area 0
+ network 192.168.30.0 0.0.0.15 area 0
+ network 192.168.40.0 0.0.0.7 area 0
+ network 203.0.113.0 0.0.0.3 area 0
+
+! Default route toward internet
+ip route 0.0.0.0 0.0.0.0 203.0.113.2
+
+! NAT/PAT
+ip access-list standard NAT_POOL
+ permit 192.168.0.0 0.0.255.255
+
+ip nat inside source list NAT_POOL interface FastEthernet0/1 overload
+
+! ACLs
+ip access-list extended ALLOW_ICMP_ONLY
+ permit icmp 192.168.10.0 0.0.0.63 host 192.168.110.6
+ deny tcp 192.168.10.0 0.0.0.63 host 192.168.110.6
+ deny udp 192.168.10.0 0.0.0.63 host 192.168.110.6
+ permit ip any any
+
+! Line config
+line con 0
+ password cisco@123
+ login
+
+line vty 0 4
+ login local
+ transport input ssh
