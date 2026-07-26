@@ -1,0 +1,42 @@
+! ============================================================
+! Device: SW3 — Branch Access Switch
+! Platform: Cisco IOU L2 15.1
+! Role: Branch end device connectivity, DHCP snooping
+! ============================================================
+
+hostname SW3
+no ip domain-lookup
+
+! DHCP Snooping
+ip dhcp snooping
+ip dhcp snooping vlan 10,20
+no ip dhcp snooping information option
+
+! Trunk toward R2 — trusted
+interface Ethernet0/0
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ ip dhcp snooping trust
+
+! PC-Branch1 — VLAN 10
+interface Ethernet0/1
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+
+! PC-Branch2 — VLAN 20
+interface Ethernet0/2
+ switchport access vlan 20
+ switchport mode access
+ switchport port-security
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+
+! Management IP
+interface Vlan20
+ ip address 192.168.120.7 255.255.255.240
+ no shutdown
+
+ip default-gateway 192.168.120.1
